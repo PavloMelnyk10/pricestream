@@ -37,10 +37,7 @@ public class CoinGeckoCryptoSource implements MarketDataSource<CryptoMarketTick>
         for (int page = 1; page <= props.maxPages(); page++) {
             List<CoinGeckoMarketItem> items = client.fetchMarketsPage(page);
 
-            if (items.isEmpty()) {
-                log.debug("CoinGecko: empty response on page {}, stopping pagination", page);
-                break;
-            }
+
 
             items.stream()
                     .map(item -> adapter.adapt(item, props.vsCurrency(), fetchedAt))

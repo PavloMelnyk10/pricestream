@@ -46,10 +46,7 @@ public class CryptoKafkaConsumer {
 
         } catch (JsonProcessingException e) {
             log.error("Failed to deserialize crypto payload. Skipping record. Payload: {}", payload, e);
-            acknowledgment.acknowledge(); // Skip poison pill
-        } catch (Exception e) {
-            log.error("Error processing crypto market data: {}", e.getMessage(), e);
-            throw new RuntimeException("Kafka processing error", e);
+            acknowledgment.acknowledge();
         }
     }
 }

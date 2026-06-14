@@ -26,6 +26,7 @@
         <module>processor</module>
         <module>api</module>
         <module>app</module>
+        <module>coverage-report</module>
     </modules>
 
     <properties>
@@ -36,8 +37,9 @@
         <logstash-logback.version>8.1</logstash-logback.version>
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-            <sonar.organization>твоя-організація</sonar.organization>
-            <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.organization>pavlomelnyk10</sonar.organization>
+        <jacoco.version>0.8.15</jacoco.version>
+        <sonar.coverage.jacoco.aggregateXmlReportPaths>${maven.multiModuleProjectDirectory}/coverage-report/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.aggregateXmlReportPaths>
     </properties>
 
     <dependencyManagement>
@@ -113,4 +115,27 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
