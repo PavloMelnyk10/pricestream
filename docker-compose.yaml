@@ -1,0 +1,81 @@
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:noble
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${SPRING_MONGODB_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${SPRING_MONGODB_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: ${SPRING_MONGODB_DATABASE:-pricestream}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Kafka
+  kafka:
+    image: apache/kafka:4.0.2
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: [ "CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "kafka:9092" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # Redis
+  redis:
+    image: redis:8.0-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_MONGODB_HOST: mongodb
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_USERNAME: ${SPRING_MONGODB_USERNAME:-admin}
+      SPRING_MONGODB_PASSWORD: ${SPRING_MONGODB_PASSWORD:-password}
+      SPRING_MONGODB_DATABASE: ${SPRING_MONGODB_DATABASE:-pricestream}
+      SPRING_MONGODB_AUTHENTICATION_DATABASE: ${SPRING_MONGODB_AUTHENTICATION_DATABASE:-admin}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: ${SPRING_REDIS_PORT:-6379}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mongo_data:

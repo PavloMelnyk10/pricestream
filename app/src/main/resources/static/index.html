@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PriceStream — Crypto Market Dashboard</title>
+    <meta name="description" content="Real-time cryptocurrency market data aggregator dashboard powered by PriceStream." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary:   #0b0e11;
+            --bg-secondary: #161a1e;
+            --bg-card:      #1e2329;
+            --bg-hover:     #252b33;
+            --border:       #2b3139;
+            --text-primary: #eaecef;
+            --text-secondary: #848e9c;
+            --text-muted:   #5e6673;
+            --gold:         #f0b90b;
+            --gold-dim:     #c99d09;
+            --green:        #0ecb81;
+            --red:          #f6465d;
+            --blue:         #1890ff;
+            --radius:       8px;
+            --transition:   0.18s ease;
+        }
+
+        html, body { height: 100%; background: var(--bg-primary); color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 13px; }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ── HEADER ── */
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 56px;
+            background: var(--bg-card); border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 32px; height: 32px; background: var(--gold); border-radius: 6px;
+            display: grid; place-items: center; font-weight: 700; font-size: 16px; color: #000;
+        }
+        .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+        .logo-text span { color: var(--gold); }
+        .header-meta { display: flex; align-items: center; gap: 20px; color: var(--text-secondary); font-size: 12px; }
+        .live-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 1.8s infinite; }
+        @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+        #live-clock { font-variant-numeric: tabular-nums; }
+
+        /* ── TICKER STRIP ── */
+        .ticker-wrap { overflow: hidden; background: var(--bg-secondary); border-bottom: 1px solid var(--border); height: 36px; }
+        .ticker-inner { display: flex; align-items: center; gap: 0; animation: ticker 60s linear infinite; white-space: nowrap; height: 36px; }
+        @keyframes ticker { 0%{ transform: translateX(0); } 100%{ transform: translateX(-50%); } }
+        .ticker-item {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 0 20px; height: 36px; border-right: 1px solid var(--border);
+            cursor: pointer; transition: background var(--transition);
+        }
+        .ticker-item:hover { background: var(--bg-hover); }
+        .ticker-symbol { font-weight: 600; color: var(--text-primary); }
+        .ticker-price { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+        .ticker-change { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+        /* ── LAYOUT ── */
+        .main { display: grid; grid-template-columns: 1fr 380px; gap: 16px; padding: 16px 24px; min-height: calc(100vh - 92px); }
+        @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } .detail-panel { display: none; } }
+
+        /* ── CARD ── */
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
+        .card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        .card-title { font-weight: 600; font-size: 14px; }
+
+        /* ── STATS ROW ── */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 16px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .stat-label { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+        .stat-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .stat-sub { color: var(--text-secondary); font-size: 11px; }
+
+        /* ── TABLE ── */
+        .table-controls { display: flex; align-items: center; gap: 12px; }
+        .search-box {
+            background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text-primary); padding: 7px 12px; font-size: 12px; font-family: inherit;
+            width: 200px; outline: none; transition: border-color var(--transition);
+        }
+        .search-box:focus { border-color: var(--gold); }
+        .search-box::placeholder { color: var(--text-muted); }
+        .btn {
+            background: transparent; border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text-secondary); padding: 7px 14px; cursor: pointer; font-size: 12px; font-family: inherit;
+            transition: all var(--transition);
+        }
+        .btn:hover { border-color: var(--gold); color: var(--gold); }
+        .btn.active { border-color: var(--gold); color: var(--gold); background: rgba(240,185,11,.08); }
+
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            position: sticky; top: 56px; z-index: 10; background: var(--bg-card);
+            padding: 10px 12px; text-align: left; color: var(--text-secondary); font-weight: 500;
+            font-size: 11px; text-transform: uppercase; letter-spacing: .6px; border-bottom: 1px solid var(--border);
+            cursor: pointer; user-select: none; white-space: nowrap;
+            transition: color var(--transition);
+        }
+        th:hover { color: var(--text-primary); }
+        th.sorted { color: var(--gold); }
+        td {
+            padding: 11px 12px; border-bottom: 1px solid rgba(43,49,57,.6);
+            font-variant-numeric: tabular-nums; white-space: nowrap;
+        }
+        tr { cursor: pointer; transition: background var(--transition); }
+        tr:hover td { background: var(--bg-hover); }
+        tr.selected td { background: rgba(240,185,11,.06); }
+
+        .coin-cell { display: flex; align-items: center; gap: 10px; }
+        .coin-icon {
+            width: 28px; height: 28px; border-radius: 50%; background: var(--bg-secondary);
+            display: grid; place-items: center; font-weight: 700; font-size: 11px; color: var(--gold);
+            flex-shrink: 0; border: 1px solid var(--border);
+        }
+        .coin-name { font-weight: 600; color: var(--text-primary); }
+        .coin-symbol { color: var(--text-secondary); font-size: 11px; }
+
+        .up { color: var(--green); }
+        .down { color: var(--red); }
+        .neutral { color: var(--text-secondary); }
+
+        .change-cell { display: flex; align-items: center; gap: 4px; font-weight: 500; }
+        .arrow { font-size: 10px; }
+
+        /* ── PAGINATION ── */
+        .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); }
+        .page-info { color: var(--text-secondary); font-size: 12px; }
+        .page-btns { display: flex; gap: 6px; }
+        .page-btn {
+            width: 30px; height: 30px; border-radius: 4px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px;
+            display: grid; place-items: center; transition: all var(--transition);
+        }
+        .page-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+        .page-btn.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+        .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+        /* ── DETAIL PANEL ── */
+        .detail-panel { display: flex; flex-direction: column; gap: 16px; }
+        .detail-empty {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 200px; color: var(--text-muted); gap: 10px;
+        }
+        .detail-empty-icon { font-size: 36px; opacity: .4; }
+        .detail-coin-header { display: flex; align-items: center; gap: 12px; }
+        .detail-icon {
+            width: 42px; height: 42px; border-radius: 50%; background: var(--bg-secondary);
+            display: grid; place-items: center; font-weight: 700; font-size: 15px; color: var(--gold);
+            border: 1px solid var(--border);
+        }
+        .detail-coin-name { font-size: 18px; font-weight: 700; }
+        .detail-coin-symbol { color: var(--text-secondary); font-size: 13px; }
+        .detail-price { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 4px 0; }
+        .detail-change { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 4px; font-weight: 600; font-size: 13px; }
+        .detail-change.up { background: rgba(14,203,129,.12); color: var(--green); }
+        .detail-change.down { background: rgba(246,70,93,.12); color: var(--red); }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .detail-stat { background: var(--bg-secondary); border-radius: 6px; padding: 10px 12px; }
+        .detail-stat-label { color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; }
+        .detail-stat-value { font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+        .chart-container { position: relative; height: 200px; }
+
+        /* ── LOADING ── */
+        .skeleton { background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-hover) 50%, var(--bg-secondary) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+        @keyframes shimmer { 0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; } }
+        .skeleton-row td > div { height: 14px; border-radius: 3px; }
+
+        /* ── TOAST ── */
+        #toast {
+            position: fixed; bottom: 24px; right: 24px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 12px 18px; font-size: 13px; color: var(--text-primary);
+            transform: translateY(80px); opacity: 0; transition: all .3s ease; z-index: 999;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+
+        /* ── REFRESH INDICATOR ── */
+        .refresh-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11px; color: var(--text-muted);
+        }
+        .spin { animation: spin 1.2s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+    <div class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Price<span>Stream</span></div>
+    </div>
+    <div class="header-meta">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <div class="live-dot"></div>
+            <span>Live</span>
+        </div>
+        <div id="live-clock"></div>
+        <div id="refresh-status" class="refresh-badge">Auto-refresh 30s</div>
+    </div>
+</header>
+
+<!-- ── TICKER STRIP ── -->
+<div class="ticker-wrap">
+    <div class="ticker-inner" id="ticker-inner"></div>
+</div>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="main">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Stats row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Total Assets</div>
+                <div class="stat-value" id="stat-total">—</div>
+                <div class="stat-sub">tracked symbols</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Top Coin</div>
+                <div class="stat-value" id="stat-top" style="font-size:16px;">—</div>
+                <div class="stat-sub" id="stat-top-price">by market cap</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Biggest Gainer</div>
+                <div class="stat-value up" id="stat-gainer" style="font-size:16px;">—</div>
+                <div class="stat-sub" id="stat-gainer-pct">24h change</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Biggest Loser</div>
+                <div class="stat-value down" id="stat-loser" style="font-size:16px;">—</div>
+                <div class="stat-sub" id="stat-loser-pct">24h change</div>
+            </div>
+        </div>
+
+        <!-- Market table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Market</div>
+                <div class="table-controls">
+                    <input class="search-box" id="search" type="text" placeholder="Search symbol or name…" />
+                    <button class="btn active" id="sort-mcap-btn" onclick="sortByMarketCap()">Market Cap ▾</button>
+                    <button class="btn" id="sort-change-btn" onclick="sortByChange()">24h Change</button>
+                </div>
+            </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:36px;">#</th>
+                            <th onclick="toggleSort('name')">Coin</th>
+                            <th onclick="toggleSort('price')" class="sorted" style="text-align:right;">Price</th>
+                            <th onclick="toggleSort('changePct24h')" style="text-align:right;">24h %</th>
+                            <th onclick="toggleSort('change24h')" style="text-align:right;">24h Change</th>
+                            <th onclick="toggleSort('volume24h')" style="text-align:right;">Volume 24h</th>
+                            <th onclick="toggleSort('marketCap')" style="text-align:right;">Market Cap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            <div class="pagination">
+                <div class="page-info" id="page-info">—</div>
+                <div class="page-btns" id="page-btns"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── DETAIL PANEL ── -->
+    <div class="detail-panel">
+        <!-- Detail card -->
+        <div class="card" id="detail-card">
+            <div class="card-header"><div class="card-title">Coin Detail</div></div>
+            <div id="detail-content" style="padding:16px;">
+                <div class="detail-empty">
+                    <div class="detail-empty-icon">📊</div>
+                    <div>Select a coin to view details</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price chart -->
+        <div class="card" id="chart-card" style="display:none;">
+            <div class="card-header">
+                <div class="card-title" id="chart-title">Price History</div>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn active" id="range-1h" onclick="setRange('1h',this)">1H</button>
+                    <button class="btn" id="range-6h"  onclick="setRange('6h',this)">6H</button>
+                    <button class="btn" id="range-24h" onclick="setRange('24h',this)">24H</button>
+                </div>
+            </div>
+            <div style="padding:12px 16px 16px;">
+                <div class="chart-container">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+    // ── STATE ──
+    const API = '/api/v1/market-data/crypto';
+    let allData = [];
+    let filtered = [];
+    let currentPage = 0;
+    const PAGE_SIZE = 25;
+    let sortKey = 'marketCap';
+    let sortDir = -1; // -1 desc, 1 asc
+    let selectedSymbol = null;
+    let chartRange = '1h';
+    let priceChart = null;
+    let refreshTimer = null;
+    let countdown = 30;
+
+    // ── CLOCK ──
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('live-clock').textContent =
+            now.toUTCString().replace('GMT', 'UTC');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── FORMAT HELPERS ──
+    const fmtPrice = v => v == null ? '—' :
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD',
+            minimumFractionDigits: 2, maximumFractionDigits: v > 1 ? 2 : 6 }).format(v);
+
+    const fmtCompact = v => v == null ? '—' :
+        new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(v);
+
+    const fmtPct = v => v == null ? '—' :
+        (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%';
+
+    function changeClass(v) {
+        if (v == null) return 'neutral';
+        return v >= 0 ? 'up' : 'down';
+    }
+
+    function initials(name) {
+        if (!name) return '?';
+        return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    }
+
+    // ── TOAST ──
+    function showToast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // ── LOAD ALL DATA ──
+    async function loadData() {
+        try {
+            showRefreshSpinner(true);
+            const res = await fetch(`${API}?page=0&size=250`);
+            if (!res.ok) throw new Error(res.statusText);
+            const paged = await res.json();
+            allData = paged.content || [];
+            applyFiltersAndSort();
+            renderStats();
+            renderTicker();
+        } catch (e) {
+            showToast('⚠ Failed to load market data: ' + e.message);
+        } finally {
+            showRefreshSpinner(false);
+        }
+    }
+
+    function showRefreshSpinner(show) {
+        const el = document.getElementById('refresh-status');
+        el.innerHTML = show
+            ? '<span class="spin">⟳</span> Loading…'
+            : `Auto-refresh ${countdown}s`;
+    }
+
+    // ── FILTER + SORT ──
+    function applyFiltersAndSort() {
+        const q = document.getElementById('search').value.toLowerCase();
+        filtered = allData.filter(d =>
+            !q ||
+            (d.symbol||'').toLowerCase().includes(q) ||
+            (d.name||'').toLowerCase().includes(q)
+        );
+        filtered.sort((a, b) => {
+            const av = a[sortKey] ?? -Infinity;
+            const bv = b[sortKey] ?? -Infinity;
+            return sortDir * (bv - av || String(bv).localeCompare(String(av)));
+        });
+        currentPage = 0;
+        renderTable();
+    }
+
+    function toggleSort(key) {
+        if (sortKey === key) sortDir *= -1;
+        else { sortKey = key; sortDir = -1; }
+        applyFiltersAndSort();
+    }
+
+    function sortByMarketCap() {
+        sortKey = 'marketCap'; sortDir = -1;
+        document.getElementById('sort-mcap-btn').classList.add('active');
+        document.getElementById('sort-change-btn').classList.remove('active');
+        applyFiltersAndSort();
+    }
+
+    function sortByChange() {
+        sortKey = 'changePct24h'; sortDir = -1;
+        document.getElementById('sort-change-btn').classList.add('active');
+        document.getElementById('sort-mcap-btn').classList.remove('active');
+        applyFiltersAndSort();
+    }
+
+    // ── RENDER TABLE ──
+    function renderTable() {
+        const tbody = document.getElementById('table-body');
+        const start = currentPage * PAGE_SIZE;
+        const page = filtered.slice(start, start + PAGE_SIZE);
+
+        if (page.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No data found</td></tr>`;
+            renderPagination();
+            return;
+        }
+
+        tbody.innerHTML = page.map((d, i) => {
+            const cls = changeClass(d.changePct24h);
+            const arrow = d.changePct24h >= 0 ? '▲' : '▼';
+            const sel = d.symbol === selectedSymbol ? 'selected' : '';
+            return `
+            <tr class="${sel}" onclick="selectCoin('${d.symbol}')">
+                <td style="color:var(--text-muted);">${start + i + 1}</td>
+                <td>
+                    <div class="coin-cell">
+                        <div class="coin-icon">${initials(d.name || d.symbol)}</div>
+                        <div>
+                            <div class="coin-name">${d.name || d.symbol}</div>
+                            <div class="coin-symbol">${d.symbol}</div>
+                        </div>
+                    </div>
+                </td>
+                <td style="text-align:right;font-weight:600;">${fmtPrice(d.price)}</td>
+                <td style="text-align:right;">
+                    <div class="change-cell ${cls}" style="justify-content:flex-end;">
+                        <span class="arrow">${arrow}</span>
+                        ${fmtPct(d.changePct24h)}
+                    </div>
+                </td>
+                <td style="text-align:right;" class="${cls}">${fmtPrice(d.change24h)}</td>
+                <td style="text-align:right;color:var(--text-secondary);">${fmtCompact(d.volume24h)}</td>
+                <td style="text-align:right;color:var(--text-secondary);">${fmtCompact(d.marketCap)}</td>
+            </tr>`;
+        }).join('');
+
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const total = filtered.length;
+        const totalPages = Math.ceil(total / PAGE_SIZE);
+        const start = currentPage * PAGE_SIZE + 1;
+        const end = Math.min((currentPage + 1) * PAGE_SIZE, total);
+
+        document.getElementById('page-info').textContent =
+            total > 0 ? `Showing ${start}–${end} of ${total}` : 'No results';
+
+        const btns = document.getElementById('page-btns');
+        let html = `<button class="page-btn" onclick="gotoPage(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>‹</button>`;
+        const range = 2;
+        for (let p = Math.max(0, currentPage - range); p <= Math.min(totalPages - 1, currentPage + range); p++) {
+            html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="gotoPage(${p})">${p + 1}</button>`;
+        }
+        html += `<button class="page-btn" onclick="gotoPage(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>›</button>`;
+        btns.innerHTML = html;
+    }
+
+    function gotoPage(p) {
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+        if (p < 0 || p >= totalPages) return;
+        currentPage = p;
+        renderTable();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── STATS ──
+    function renderStats() {
+        document.getElementById('stat-total').textContent = allData.length;
+
+        const byMcap = [...allData].sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
+        if (byMcap[0]) {
+            document.getElementById('stat-top').textContent = byMcap[0].name || byMcap[0].symbol;
+            document.getElementById('stat-top-price').textContent = fmtCompact(byMcap[0].marketCap) + ' market cap';
+        }
+
+        const byChange = allData.filter(d => d.changePct24h != null);
+        if (byChange.length > 0) {
+            byChange.sort((a, b) => b.changePct24h - a.changePct24h);
+            const gainer = byChange[0];
+            document.getElementById('stat-gainer').textContent = gainer.symbol;
+            document.getElementById('stat-gainer-pct').textContent = fmtPct(gainer.changePct24h);
+
+            const loser = byChange[byChange.length - 1];
+            document.getElementById('stat-loser').textContent = loser.symbol;
+            document.getElementById('stat-loser-pct').textContent = fmtPct(loser.changePct24h);
+        }
+    }
+
+    // ── TICKER ──
+    function renderTicker() {
+        const top = [...allData]
+            .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0))
+            .slice(0, 20);
+
+        const html = top.map(d => {
+            const cls = changeClass(d.changePct24h);
+            return `<div class="ticker-item" onclick="selectCoin('${d.symbol}')">
+                <span class="ticker-symbol">${d.symbol}</span>
+                <span class="ticker-price">${fmtPrice(d.price)}</span>
+                <span class="ticker-change ${cls}">${fmtPct(d.changePct24h)}</span>
+            </div>`;
+        }).join('');
+
+        // duplicate for seamless loop
+        const inner = document.getElementById('ticker-inner');
+        inner.innerHTML = html + html;
+    }
+
+    // ── COIN DETAIL ──
+    async function selectCoin(symbol) {
+        selectedSymbol = symbol;
+        // re-render table to highlight selected
+        renderTable();
+
+        const coin = allData.find(d => d.symbol === symbol);
+        if (!coin) return;
+
+        const cls = changeClass(coin.changePct24h);
+        const arrow = coin.changePct24h >= 0 ? '▲' : '▼';
+
+        document.getElementById('detail-content').innerHTML = `
+            <div class="detail-coin-header">
+                <div class="detail-icon">${initials(coin.name || coin.symbol)}</div>
+                <div>
+                    <div class="detail-coin-name">${coin.name || coin.symbol}</div>
+                    <div class="detail-coin-symbol">${coin.symbol}</div>
+                </div>
+            </div>
+            <div class="detail-price">${fmtPrice(coin.price)}</div>
+            <div class="detail-change ${cls}">${arrow} ${fmtPct(coin.changePct24h)}</div>
+            <div class="detail-grid" style="margin-top:14px;">
+                <div class="detail-stat">
+                    <div class="detail-stat-label">Market Cap</div>
+                    <div class="detail-stat-value">${fmtCompact(coin.marketCap)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-label">Volume 24h</div>
+                    <div class="detail-stat-value">${fmtCompact(coin.volume24h)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-label">24h Change</div>
+                    <div class="detail-stat-value ${cls}">${fmtPrice(coin.change24h)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-label">Circ. Supply</div>
+                    <div class="detail-stat-value">${fmtCompact(coin.circulatingSupply)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-label">Total Supply</div>
+                    <div class="detail-stat-value">${fmtCompact(coin.totalSupply)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-label">Source</div>
+                    <div class="detail-stat-value">${coin.source || '—'}</div>
+                </div>
+            </div>
+            <div style="margin-top:12px;color:var(--text-muted);font-size:11px;">
+                Last updated: ${coin.timestamp ? new Date(coin.timestamp).toLocaleString() : '—'}
+            </div>
+        `;
+
+        document.getElementById('chart-card').style.display = 'block';
+        document.getElementById('chart-title').textContent = `${symbol} · Price History`;
+        await loadChart(symbol, chartRange);
+    }
+
+    async function loadChart(symbol, range) {
+        const now = new Date();
+        const hours = range === '1h' ? 1 : range === '6h' ? 6 : 24;
+        const from = new Date(now.getTime() - hours * 3600 * 1000).toISOString();
+        const to = now.toISOString();
+
+        try {
+            const res = await fetch(`${API}/${symbol}/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&limit=300`);
+            const data = await res.json();
+
+            const pts = [...data].reverse(); // oldest first for chart
+            const labels = pts.map(d => {
+                const dt = new Date(d.timestamp);
+                return range === '24h'
+                    ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            });
+            const prices = pts.map(d => d.price);
+
+            const isUp = prices.length < 2 || prices[prices.length - 1] >= prices[0];
+            const lineColor = isUp ? '#0ecb81' : '#f6465d';
+            const fillColor = isUp ? 'rgba(14,203,129,0.08)' : 'rgba(246,70,93,0.08)';
+
+            const ctx = document.getElementById('price-chart').getContext('2d');
+            if (priceChart) priceChart.destroy();
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: prices,
+                        borderColor: lineColor,
+                        backgroundColor: fillColor,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e2329',
+                            borderColor: '#2b3139',
+                            borderWidth: 1,
+                            titleColor: '#848e9c',
+                            bodyColor: '#eaecef',
+                            callbacks: {
+                                label: ctx => fmtPrice(ctx.parsed.y)
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#1e2329' },
+                            ticks: { color: '#5e6673', maxTicksLimit: 6, font: { size: 10 } }
+                        },
+                        y: {
+                            position: 'right',
+                            grid: { color: '#1e2329' },
+                            ticks: {
+                                color: '#5e6673', font: { size: 10 },
+                                callback: v => fmtCompact(v)
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            showToast('⚠ Could not load chart data');
+        }
+    }
+
+    function setRange(range, btn) {
+        chartRange = range;
+        document.querySelectorAll('#chart-card .btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (selectedSymbol) loadChart(selectedSymbol, range);
+    }
+
+    // ── SEARCH ──
+    document.getElementById('search').addEventListener('input', applyFiltersAndSort);
+
+    // ── AUTO REFRESH ──
+    function startRefreshCountdown() {
+        countdown = 30;
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(() => {
+            countdown--;
+            document.getElementById('refresh-status').textContent = `Auto-refresh ${countdown}s`;
+            if (countdown <= 0) {
+                loadData();
+                countdown = 30;
+            }
+        }, 1000);
+    }
+
+    // ── INIT ──
+    loadData();
+    startRefreshCountdown();
+</script>
+</body>
+</html>

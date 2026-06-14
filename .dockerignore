@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+.env
+
+# Maven build artifacts
+target/
+**/target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Local configuration
+docker-compose.override.yml

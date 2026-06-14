@@ -1,0 +1,110 @@
+spring:
+  application:
+    name: pricestream
+
+  # Kafka configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 1
+    consumer:
+      group-id: pricestream-processor-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+    listener:
+      ack-mode: manual
+
+  # MongoDB configuration
+  mongodb:
+    port: ${SPRING_MONGODB_PORT:27017}
+    host: ${SPRING_MONGODB_HOST:localhost}
+    username: ${SPRING_MONGODB_USERNAME:admin}
+    password: ${SPRING_MONGODB_PASSWORD:password}
+    database: ${SPRING_MONGODB_DATABASE:pricestream}
+    authentication-database: ${SPRING_MONGODB_AUTHENTICATION_DATABASE:admin}
+
+  # Redis configuration
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+
+api:
+  rate-limit:
+    enabled: true
+    requests-per-window: 60
+    window-seconds: 60
+
+# CoinGecko API configuration
+coingecko:
+  # Free tier API base URL
+  base-url: https://api.coingecko.com/api/v3
+  # API key for authentication
+  api-key: ${COINGECKO_API_KEY}
+  # Quote currency (usd is equivalent to usdt)
+  vs-currency: usd
+  # Number of coins per page
+  per-page: 250
+  # Total pages to fetch per cycle
+  max-pages: 1
+
+# Collector configuration
+collector:
+  schedule:
+    # Fixed delay between fetch cycles
+    crypto-delay-ms: 60000         # 5 minutes
+    crypto-initial-delay-ms: 5000  # 5 seconds after startup
+  kafka:
+    topic-crypto: market.crypto
+
+# Resilience4j configuration
+resilience4j:
+  ratelimiter:
+    instances:
+      coingecko:
+        # Max 25 calls per minute
+        limit-for-period: 25
+        limit-refresh-period: 60s
+        # Max wait time for a permit
+        timeout-duration: 30s
+
+  retry:
+    instances:
+      coingecko:
+        max-attempts: 3
+        wait-duration: 10s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.io.IOException
+          - com.pricestream.core.exception.MarketDataException
+        ignore-exceptions:
+          - org.springframework.web.reactive.function.client.WebClientResponseException
+
+  circuitbreaker:
+    instances:
+      coingecko:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        # Open circuit at 50% failure rate
+        failure-rate-threshold: 50
+        # Open state duration
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+
+# Logging configuration
+logging:
+  level:
+    com.pricestream: DEBUG
+    org.springframework.kafka: INFO
+    io.github.resilience4j: INFO
