@@ -5,6 +5,9 @@ import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.port.out.CryptoPriceReadPort;
 import com.pricestream.processor.domain.CryptoPriceDocument;
 import com.pricestream.processor.repository.CryptoPriceRepository;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,10 +15,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Adapter implementing the read port to fetch crypto prices from MongoDB.
@@ -63,7 +62,7 @@ public class CryptoPriceReadAdapter implements CryptoPriceReadPort {
                 .stream()
                 .limit(limit > 0 ? limit : 200)
                 .map(mapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -73,7 +72,7 @@ public class CryptoPriceReadAdapter implements CryptoPriceReadPort {
                 .findTopByMarketCap(PageRequest.of(0, effectiveLimit))
                 .stream()
                 .map(mapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

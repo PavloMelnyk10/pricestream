@@ -78,7 +78,7 @@ public class MarketDataKafkaPublisher implements MarketDataPublisher {
             byte[] hash = MessageDigest.getInstance("SHA-256")
                     .digest(raw.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException _) {
             return Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
         }
     }

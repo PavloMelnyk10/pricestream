@@ -28,7 +28,7 @@ public class CryptoPricePersistenceAdapter implements MarketDataPersister<Crypto
             cryptoPriceRepository.save(document);
             eventPublisher.publishEvent(new MarketDataUpdatedEvent(AssetType.CRYPTO));
             log.debug("Successfully saved CryptoPriceDocument for symbol: {}", document.getSymbol());
-        } catch (DuplicateKeyException e) {
+        } catch (DuplicateKeyException _) {
             log.debug("Duplicate record skipped for symbol: {} at timestamp: {}",
                     document.getSymbol(), document.getTimestamp());
         } catch (Exception e) {
