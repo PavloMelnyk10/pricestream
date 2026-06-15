@@ -108,3 +108,18 @@ logging:
     com.pricestream: DEBUG
     org.springframework.kafka: INFO
     io.github.resilience4j: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,circuitbreakers,ratelimiters,retries,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    ping:
+      enabled: false
+    ssl:
+      enabled: false
+
