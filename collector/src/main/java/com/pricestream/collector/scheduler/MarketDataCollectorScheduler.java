@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.PeriodicTrigger;
 import org.springframework.stereotype.Component;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.time.Duration;
 import java.util.List;
@@ -19,13 +20,16 @@ import java.util.List;
 public class MarketDataCollectorScheduler {
 
     private final MarketDataPublisher publisher;
+    private final MeterRegistry meterRegistry;
 
     public MarketDataCollectorScheduler(
             List<MarketDataSource<?>> sources,
             MarketDataPublisher publisher,
-            TaskScheduler taskScheduler) {
+            TaskScheduler taskScheduler,
+            MeterRegistry meterRegistry) {
 
         this.publisher = publisher;
+        this.meterRegistry = meterRegistry;
 
         for (MarketDataSource<?> source : sources) {
             scheduleSource(source, taskScheduler);
@@ -55,10 +59,12 @@ public class MarketDataCollectorScheduler {
         if (ticks.isEmpty()) {
             log.warn("{} fetch returned 0 ticks — circuit may be open or API unavailable",
                     sourceName);
+            meterRegistry.counter("pricestream.fetch.empty", "source", sourceName).increment();
             return;
         }
 
         int published = publisher.publishAll(source.topicName(), ticks);
+        meterRegistry.counter("pricestream.fetch.success", "source", sourceName).increment(published);
 
         log.info("{} cycle complete — fetched={} published={} durationMs={}",
                 sourceName, ticks.size(), published, System.currentTimeMillis() - start);

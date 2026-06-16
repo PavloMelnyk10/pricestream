@@ -1,6 +1,7 @@
 package com.pricestream.api.cache;
 
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.port.in.CryptoPriceReadUseCase;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class CachingCryptoPriceDecorator implements CryptoPriceReadUseCase {
     @Override
     @Cacheable(value = "cryptoPriceHistory",
                key = "#symbol + '-' + (#from != null ? #from.toEpochMilli() / 60000 : 0) + '-' + (#to != null ? #to.toEpochMilli() / 60000 : 0) + '-' + #limit")
-    public List<CryptoPrice> getCryptoPriceHistory(
+    public CryptoPriceHistory getCryptoPriceHistory(
             String symbol, Instant from, Instant to, int limit) {
         return delegate.getCryptoPriceHistory(symbol, from, to, limit);
     }

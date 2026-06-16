@@ -77,5 +77,32 @@ services:
       redis:
         condition: service_healthy
 
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - app
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:11.6
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+
 volumes:
   mongo_data:

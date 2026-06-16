@@ -18,6 +18,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.mockito.Spy;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Crypto Price Persistence Adapter Tests")
@@ -28,6 +31,9 @@ class CryptoPricePersistenceAdapterTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Spy
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @InjectMocks
     private CryptoPricePersistenceAdapter adapter;

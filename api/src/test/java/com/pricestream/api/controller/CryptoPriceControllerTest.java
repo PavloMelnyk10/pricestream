@@ -8,6 +8,7 @@ import com.pricestream.api.dto.CryptoPriceResponse;
 import com.pricestream.api.dto.PagedResponse;
 import com.pricestream.api.mapper.CryptoPriceRestMapper;
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.port.in.CryptoPriceReadUseCase;
 import java.time.Instant;
@@ -75,11 +76,12 @@ class CryptoPriceControllerTest {
     void shouldGetPriceHistory() {
         // Given
         List<CryptoPrice> domainList = List.of();
+        CryptoPriceHistory wrapper = new CryptoPriceHistory(domainList);
         List<CryptoPriceResponse> expectedResponse = List.of();
         Instant from = Instant.now();
         Instant to = Instant.now();
         
-        when(useCase.getCryptoPriceHistory("BTCUSD", from, to, 100)).thenReturn(domainList);
+        when(useCase.getCryptoPriceHistory("BTCUSD", from, to, 100)).thenReturn(wrapper);
         when(mapper.toResponseList(domainList)).thenReturn(expectedResponse);
 
         // When

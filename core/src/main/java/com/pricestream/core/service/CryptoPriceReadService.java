@@ -1,6 +1,7 @@
 package com.pricestream.core.service;
 
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.exception.MarketDataException;
 import com.pricestream.core.port.in.CryptoPriceReadUseCase;
@@ -31,9 +32,10 @@ public class CryptoPriceReadService implements CryptoPriceReadUseCase {
     }
 
     @Override
-    public List<CryptoPrice> getCryptoPriceHistory(
+    public CryptoPriceHistory getCryptoPriceHistory(
             String symbol, Instant from, Instant to, int limit) {
-        return cryptoPriceReadPort.findHistory(symbol, from, to, limit);
+        List<CryptoPrice> history = cryptoPriceReadPort.findHistory(symbol, from, to, limit);
+        return new CryptoPriceHistory(history);
     }
 
     @Override

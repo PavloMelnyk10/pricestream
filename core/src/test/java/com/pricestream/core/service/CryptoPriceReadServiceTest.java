@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.exception.MarketDataException;
 import com.pricestream.core.port.out.CryptoPriceReadPort;
@@ -92,10 +93,10 @@ class CryptoPriceReadServiceTest {
         given(cryptoPriceReadPort.findHistory(symbol, from, to, limit)).willReturn(expectedHistory);
 
         // When
-        List<CryptoPrice> result = cryptoPriceReadService.getCryptoPriceHistory(symbol, from, to, limit);
+        CryptoPriceHistory result = cryptoPriceReadService.getCryptoPriceHistory(symbol, from, to, limit);
 
         // Then
-        assertThat(result).isSameAs(expectedHistory);
+        assertThat(result.content()).isSameAs(expectedHistory);
         then(cryptoPriceReadPort).should().findHistory(symbol, from, to, limit);
     }
 

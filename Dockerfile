@@ -9,6 +9,7 @@ COPY collector/pom.xml collector/
 COPY processor/pom.xml processor/
 COPY api/pom.xml api/
 COPY app/pom.xml app/
+COPY coverage-report/pom.xml coverage-report/
 
 # Fetch dependencies
 RUN mvn dependency:go-offline -B

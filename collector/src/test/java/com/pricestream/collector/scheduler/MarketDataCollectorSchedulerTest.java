@@ -24,6 +24,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.PeriodicTrigger;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Market Data Collector Scheduler Tests")
@@ -52,10 +54,13 @@ class MarketDataCollectorSchedulerTest {
         when(dataSource.delayMs()).thenReturn(20000L);
         when(dataSource.initialDelayMs()).thenReturn(5000L);
 
+        MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
         new MarketDataCollectorScheduler(
                 List.of(dataSource),
                 publisher,
-                taskScheduler
+                taskScheduler,
+                meterRegistry
         );
     }
 
