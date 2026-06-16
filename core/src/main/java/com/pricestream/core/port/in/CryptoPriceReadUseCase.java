@@ -1,6 +1,7 @@
 package com.pricestream.core.port.in;
 
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import java.time.Instant;
 import java.util.List;
@@ -15,7 +16,7 @@ public interface CryptoPriceReadUseCase {
 
     CryptoPrice getLatestCryptoPrice(String symbol);
 
-    List<CryptoPrice> getCryptoPriceHistory(String symbol, Instant from, Instant to, int limit);
+    CryptoPriceHistory getCryptoPriceHistory(String symbol, Instant from, Instant to, int limit);
 
     List<CryptoPrice> getTopCryptoByMarketCap(int limit);
 

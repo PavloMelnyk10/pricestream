@@ -4,6 +4,7 @@ import com.pricestream.api.dto.CryptoPriceResponse;
 import com.pricestream.api.dto.PagedResponse;
 import com.pricestream.api.mapper.CryptoPriceRestMapper;
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.port.in.CryptoPriceReadUseCase;
 import lombok.RequiredArgsConstructor;
@@ -48,8 +49,8 @@ public class CryptoPriceController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "100") int limit) {
-        List<CryptoPrice> history = cryptoPriceReadUseCase.getCryptoPriceHistory(symbol, from, to, limit);
-        return ResponseEntity.ok(mapper.toResponseList(history));
+        CryptoPriceHistory historyWrapper = cryptoPriceReadUseCase.getCryptoPriceHistory(symbol, from, to, limit);
+        return ResponseEntity.ok(mapper.toResponseList(historyWrapper.content()));
     }
 
     @GetMapping("/top")

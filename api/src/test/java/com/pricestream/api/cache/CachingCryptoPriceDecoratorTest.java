@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pricestream.core.domain.CryptoPrice;
+import com.pricestream.core.domain.CryptoPriceHistory;
 import com.pricestream.core.domain.PagedResult;
 import com.pricestream.core.port.in.CryptoPriceReadUseCase;
 import java.time.Instant;
@@ -60,13 +61,13 @@ class CachingCryptoPriceDecoratorTest {
     @DisplayName("Should delegate getCryptoPriceHistory")
     void shouldDelegateGetCryptoPriceHistory() {
         // Given
-        List<CryptoPrice> expected = List.of();
+        CryptoPriceHistory expected = new CryptoPriceHistory(List.of());
         Instant from = Instant.now();
         Instant to = Instant.now();
         when(delegate.getCryptoPriceHistory("BTCUSD", from, to, 100)).thenReturn(expected);
 
         // When
-        List<CryptoPrice> result = decorator.getCryptoPriceHistory("BTCUSD", from, to, 100);
+        CryptoPriceHistory result = decorator.getCryptoPriceHistory("BTCUSD", from, to, 100);
 
         // Then
         assertThat(result).isSameAs(expected);
